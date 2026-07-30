@@ -18,7 +18,7 @@ param(
     [int]$LoopIntervalSeconds = 10,
     [int]$LoopPeopleSyncEveryN = 30,
 
-    [ValidateSet("Info","Capabilities","SetTime","CreateUser","RemoveUser","ListUsers","CaptureFace","EnrollFace","EnrollCard","SearchEvents","ExportAttendance","SyncPeople","SyncEvents","SyncLoop","All")]
+    [ValidateSet("Info","Capabilities","SetTime","CreateUser","RemoveUser","ListUsers","CaptureFace","EnrollFace","EnrollCard","SearchEvents","ExportAttendance","SyncPeople","SyncEvents","SyncLoop","LiveStream","All")]
     [string]$Action = "Info",
 
     # Used by CreateUser / EnrollFace / EnrollCard
@@ -438,6 +438,111 @@ function Sync-HikEventsToCloud {
     Sync-HikEventsOnly
 }
 
+function Read-JsonBlocksFromBuffer {
+    param([string]$Text)
+    $results = New-Object System.Collections.Generic.List[string]
+    $depth = 0
+    $start = -1
+    $lastEnd = 0
+    for ($i = 0; $i -lt $Text.Length; $i++) {
+        $c = $Text[$i]
+        if ($c -eq '{') {
+            if ($depth -eq 0) { $start = $i }
+            $depth++
+        } elseif ($c -eq '}') {
+            if ($depth -gt 0) {
+                $depth--
+                if ($depth -eq 0 -and $start -ge 0) {
+                    $results.Add($Text.Substring($start, $i - $start + 1))
+                    $lastEnd = $i + 1
+                    $start = -1
+                }
+            }
+        }
+    }
+    return @{ Blocks = $results; Leftover = $Text.Substring($lastEnd) }
+}
+
+function Push-HikStreamEvent {
+    param($EventObj)
+    $ace = $EventObj.AccessControllerEvent
+    if (-not $ace -or -not $ace.employeeNoString) { return }
+    $eventType = Get-HikEventType -Minor ([int]$ace.subEventType)
+    # Only push successful check-in/check-out scans - skip fails and other
+    # non-verification system events (door status, etc.).
+    if ($eventType -notin @("face_success", "card_success", "fingerprint_success")) { return }
+    $payload = @(@{
+        employee_no = "$($ace.employeeNoString)"
+        event_time  = ([datetime]$EventObj.dateTime).ToString("o")
+        major       = [int]$ace.majorEventType
+        minor       = [int]$ace.subEventType
+        event_type  = $eventType
+        verify_mode = "$($ace.currentVerifyMode)"
+        door_no     = if ($ace.doorNo) { [int]$ace.doorNo } else { $null }
+        raw         = $EventObj
+    })
+    try {
+        Invoke-CloudApi -Method POST -Path "/rest/v1/events?on_conflict=device_serial,employee_no,event_time,minor,door_no" -Body $payload -Prefer "resolution=ignore-duplicates,return=minimal" -ErrorAction Stop | Out-Null
+        Write-SyncLog "StreamEvent: $($ace.employeeNoString) ($($ace.name)) $eventType at $($EventObj.dateTime)"
+    } catch {
+        Write-SyncLog "StreamEvent FAILED to push ($($ace.employeeNoString) at $($EventObj.dateTime)): $($_.Exception.Message)"
+    }
+}
+
+function Start-HikEventStream {
+    try { Sync-HikPeopleToCloud } catch { Write-SyncLog "EventStream: initial people sync failed, continuing anyway: $($_.Exception.Message)" }
+
+    while ($true) {
+        try {
+            Write-SyncLog "EventStream: connecting to device alert stream..."
+            $req = [System.Net.HttpWebRequest]::Create("$BaseUri/ISAPI/Event/notification/alertStream?format=json")
+            $req.Credentials = $script:Cache
+            $req.Method = "GET"
+            $req.Accept = "multipart/mixed"
+            $req.Timeout = -1
+            $req.ReadWriteTimeout = 600000
+            $req.AllowReadStreamBuffering = $false
+            $resp = $req.GetResponse()
+            $stream = $resp.GetResponseStream()
+            Write-SyncLog "EventStream: connected, listening for live events"
+
+            $buffer = New-Object byte[] 8192
+            $leftover = ""
+            $lastPeopleSync = Get-Date
+
+            while ($true) {
+                $read = $stream.Read($buffer, 0, $buffer.Length)
+                if ($read -le 0) { throw "Stream closed by device (0 bytes read)" }
+                $leftover += [System.Text.Encoding]::UTF8.GetString($buffer, 0, $read)
+
+                $parsed = Read-JsonBlocksFromBuffer -Text $leftover
+                $leftover = $parsed.Leftover
+                foreach ($blockText in $parsed.Blocks) {
+                    try {
+                        $obj = $blockText | ConvertFrom-Json
+                        if ($obj.eventType -eq "AccessControllerEvent") {
+                            Push-HikStreamEvent -EventObj $obj
+                        }
+                    } catch {
+                        Write-SyncLog "EventStream: failed to parse a block: $($_.Exception.Message)"
+                    }
+                }
+                if ($leftover.Length -gt 200000) {
+                    Write-SyncLog "EventStream: leftover buffer grew too large, discarding and resyncing on next event"
+                    $leftover = ""
+                }
+                if (((Get-Date) - $lastPeopleSync).TotalMinutes -ge 10) {
+                    try { Sync-HikPeopleToCloud } catch { Write-SyncLog "EventStream: periodic people sync failed: $($_.Exception.Message)" }
+                    $lastPeopleSync = Get-Date
+                }
+            }
+        } catch {
+            Write-SyncLog "EventStream disconnected/error: $($_.Exception.Message) - reconnecting in 5s"
+            Start-Sleep -Seconds 5
+        }
+    }
+}
+
 function Start-HikSyncLoop {
     param([int]$IntervalSeconds = 10, [int]$PeopleSyncEveryN = 30)
     Write-SyncLog "SyncLoop starting (interval=${IntervalSeconds}s, people re-synced every $PeopleSyncEveryN iterations)"
@@ -469,6 +574,7 @@ switch ($Action) {
     "SyncPeople"        { Sync-HikPeopleToCloud }
     "SyncEvents"        { Sync-HikEventsToCloud }
     "SyncLoop"          { Start-HikSyncLoop -IntervalSeconds $LoopIntervalSeconds -PeopleSyncEveryN $LoopPeopleSyncEveryN }
+    "LiveStream"        { Start-HikEventStream }
     "All" {
         Get-DeviceInfo
         Get-Capabilities
