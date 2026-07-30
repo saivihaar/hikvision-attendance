@@ -126,16 +126,39 @@ Test it manually first:
 
 Check Supabase's **Table Editor** to confirm rows appeared in `people` and `events`.
 
-Then make it run automatically every 5 minutes:
+**Live sync (recommended) — event-driven, not time-based.** Rather than checking on
+a timer, `configure-terminal.ps1 -Action LiveStream` opens a persistent connection to
+the device's own event stream, so a successful check-in/check-out pushes to the
+dashboard the instant it happens - no polling delay at all.
+
+Double-click **`Start-Live-Sync.bat`** to start it. Leave the window open (or
+minimized) for as long as you want live updates. Closing it just stops new events
+from syncing - nothing else breaks.
+
+**Auto-start at every login (no clicking required):** a shortcut is already placed in
+your Windows Startup folder (`shell:startup`), so this starts automatically each time
+you log in - Task Scheduler blocks automatic startup triggers on this machine, but the
+Startup folder doesn't have that restriction. Note this only survives sleep, not a full
+shutdown/restart - after those, either wait for next login or double-click the file
+yourself. The `.bat` refuses to start a second copy if one's already running (the
+device only allows a couple of concurrent connections, and running two would break
+both).
+
+One device quirk worth knowing: this terminal only allows a small number of
+simultaneous live-stream connections. If it ever gets stuck refusing new connections
+(`deployExceedMax` in the log), a normal device reboot (not factory reset - no data
+lost) clears it in under a minute:
 
 ```powershell
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument '-NoProfile -File "C:\Users\saivi\OneDrive\Desktop\hikvision-attendance\configure-terminal.ps1" -Action SyncEvents'
-$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 3650)
-$logonTrigger = New-ScheduledTaskTrigger -AtLogOn
-Register-ScheduledTask -TaskName "HikvisionCloudSync" -Action $action -Trigger @($trigger, $logonTrigger) -RunLevel Limited
+# Only needed if the log shows repeated "deployExceedMax" connection errors
+$pass = (Get-Content "C:\Users\saivi\OneDrive\Desktop\hikvision-attendance\device-secrets.json" -Raw | ConvertFrom-Json).HikPassword
+$cache = New-Object System.Net.CredentialCache
+$cache.Add([Uri]"http://192.168.0.144", "Digest", (New-Object System.Net.NetworkCredential("admin", $pass)))
+$req = [System.Net.HttpWebRequest]::Create("http://192.168.0.144/ISAPI/System/reboot")
+$req.Credentials = $cache; $req.Method = "PUT"; $req.ContentLength = 0
+$req.GetResponse() | Out-Null
 ```
 
-Check `sync-agent.log` after a few cycles to confirm it's running unattended.
 **If this PC is off or offline, syncing pauses** — the dashboard will show a
 "last synced" warning rather than silently going stale.
 
