@@ -1,0 +1,4 @@
+{
+  "SupabaseUrl": "PASTE_YOUR_SUPABASE_PROJECT_URL_HERE",
+  "SupabaseServiceRoleKey": "PASTE_YOUR_SERVICE_ROLE_KEY_HERE"
+}

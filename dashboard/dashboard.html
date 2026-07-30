@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attendance - Live Status</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header>
+  <h1>Attendance</h1>
+  <nav>
+    <a href="dashboard.html">Live</a>
+    <a href="history.html">History</a>
+  </nav>
+  <button id="logoutBtn">Log out</button>
+</header>
+
+<main>
+  <div class="card">
+    <h2 style="margin-top:0;">Who's in / out right now</h2>
+    <p id="staleNote" class="stale-note"></p>
+    <div id="statusGrid" class="status-grid">Loading...</div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/auth-guard.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

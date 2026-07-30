@@ -1,0 +1,10 @@
+device-secrets.json
+cloud-config.json
+hikvision-attendance/
+sync-state.json
+sync-agent.log
+users/
+captured-face.jpg
+*.csv
+system-capabilities.json
+accesscontrol-capabilities.json
