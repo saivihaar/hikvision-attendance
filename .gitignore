@@ -5,6 +5,7 @@ sync-state.json
 sync-agent.log
 users/
 captured-face.jpg
+LOGO New.jpg
 *.csv
 system-capabilities.json
 accesscontrol-capabilities.json

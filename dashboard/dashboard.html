@@ -3,14 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Attendance - Live Status</title>
+<title>Sai Vihaar - Live Attendance</title>
+<link rel="icon" href="img/logo.jpg">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <header>
-  <h1>Attendance</h1>
+  <div class="brand">
+    <img src="img/logo.jpg" alt="Sai Vihaar Inn & Suites">
+    <div class="brand-text">
+      <span class="name">Sai Vihaar</span>
+      <span class="sub">Staff Attendance</span>
+    </div>
+  </div>
   <nav>
-    <a href="dashboard.html">Live</a>
+    <a href="dashboard.html" class="active">Live</a>
     <a href="history.html">History</a>
   </nav>
   <button id="logoutBtn">Log out</button>
@@ -18,7 +25,7 @@
 
 <main>
   <div class="card">
-    <h2 style="margin-top:0;">Who's in / out right now</h2>
+    <h2>Who's in / out right now</h2>
     <p id="staleNote" class="stale-note"></p>
     <div id="statusGrid" class="status-grid">Loading...</div>
   </div>

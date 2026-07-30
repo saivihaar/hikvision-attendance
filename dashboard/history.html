@@ -3,22 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Attendance - History</title>
+<title>Sai Vihaar - Attendance History</title>
+<link rel="icon" href="img/logo.jpg">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <header>
-  <h1>Attendance</h1>
+  <div class="brand">
+    <img src="img/logo.jpg" alt="Sai Vihaar Inn & Suites">
+    <div class="brand-text">
+      <span class="name">Sai Vihaar</span>
+      <span class="sub">Staff Attendance</span>
+    </div>
+  </div>
   <nav>
     <a href="dashboard.html">Live</a>
-    <a href="history.html">History</a>
+    <a href="history.html" class="active">History</a>
   </nav>
   <button id="logoutBtn">Log out</button>
 </header>
 
 <main>
   <div class="card">
-    <h2 style="margin-top:0;">History</h2>
+    <h2>History</h2>
     <div class="filters">
       <label>From
         <input type="date" id="fromDate">
