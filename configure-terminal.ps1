@@ -493,6 +493,8 @@ function Start-HikEventStream {
     try { Sync-HikPeopleToCloud } catch { Write-SyncLog "EventStream: initial people sync failed, continuing anyway: $($_.Exception.Message)" }
 
     while ($true) {
+        $req = $null
+        $resp = $null
         try {
             Write-SyncLog "EventStream: connecting to device alert stream..."
             $req = [System.Net.HttpWebRequest]::Create("$BaseUri/ISAPI/Event/notification/alertStream?format=json")
@@ -502,6 +504,7 @@ function Start-HikEventStream {
             $req.Timeout = -1
             $req.ReadWriteTimeout = 600000
             $req.AllowReadStreamBuffering = $false
+            $req.KeepAlive = $false
             $resp = $req.GetResponse()
             $stream = $resp.GetResponseStream()
             Write-SyncLog "EventStream: connected, listening for live events"
@@ -539,6 +542,9 @@ function Start-HikEventStream {
         } catch {
             Write-SyncLog "EventStream disconnected/error: $($_.Exception.Message) - reconnecting in 5s"
             Start-Sleep -Seconds 5
+        } finally {
+            if ($resp) { try { $resp.Close() } catch {} }
+            if ($req)  { try { $req.Abort() } catch {} }
         }
     }
 }
