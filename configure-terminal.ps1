@@ -15,8 +15,10 @@ param(
     [string]$SyncStatePath   = "$PSScriptRoot\sync-state.json",
     [string]$SyncLogPath     = "$PSScriptRoot\sync-agent.log",
     [int]$SyncOverlapMinutes = 5,
+    [int]$LoopIntervalSeconds = 10,
+    [int]$LoopPeopleSyncEveryN = 30,
 
-    [ValidateSet("Info","Capabilities","SetTime","CreateUser","RemoveUser","ListUsers","CaptureFace","EnrollFace","EnrollCard","SearchEvents","ExportAttendance","SyncPeople","SyncEvents","All")]
+    [ValidateSet("Info","Capabilities","SetTime","CreateUser","RemoveUser","ListUsers","CaptureFace","EnrollFace","EnrollCard","SearchEvents","ExportAttendance","SyncPeople","SyncEvents","SyncLoop","All")]
     [string]$Action = "Info",
 
     # Used by CreateUser / EnrollFace / EnrollCard
@@ -376,7 +378,7 @@ function Sync-HikPeopleToCloud {
     }
 }
 
-function Sync-HikEventsToCloud {
+function Sync-HikEventsOnly {
     $state = @{ last_synced_time = (Get-Date).AddHours(-24) }
     if (Test-Path $SyncStatePath) {
         $saved = Get-Content $SyncStatePath -Raw | ConvertFrom-Json
@@ -385,13 +387,6 @@ function Sync-HikEventsToCloud {
 
     $start = $state.last_synced_time.AddMinutes(-$SyncOverlapMinutes)
     $end = Get-Date
-
-    try {
-        Sync-HikPeopleToCloud
-    } catch {
-        Write-SyncLog "SyncEvents ABORTED: people sync failed, not touching sync-state.json"
-        return
-    }
 
     $events = Search-HikEvents -Start $start -End $end
     $withEmployee = @($events | Where-Object { $_.employeeNoString })
@@ -430,8 +425,33 @@ function Sync-HikEventsToCloud {
     }
 
     @{ last_synced_time = $end.ToString("o") } | ConvertTo-Json | Set-Content -Path $SyncStatePath -Encoding utf8
-
     Write-SyncLog "SyncEvents: pushed $($withEmployee.Count) events (skipped $skipped without employeeNoString), window $($start.ToString('o')) to $($end.ToString('o'))"
+}
+
+function Sync-HikEventsToCloud {
+    try {
+        Sync-HikPeopleToCloud
+    } catch {
+        Write-SyncLog "SyncEvents ABORTED: people sync failed, not touching sync-state.json"
+        return
+    }
+    Sync-HikEventsOnly
+}
+
+function Start-HikSyncLoop {
+    param([int]$IntervalSeconds = 10, [int]$PeopleSyncEveryN = 30)
+    Write-SyncLog "SyncLoop starting (interval=${IntervalSeconds}s, people re-synced every $PeopleSyncEveryN iterations)"
+    $counter = 0
+    while ($true) {
+        try {
+            if ($counter % $PeopleSyncEveryN -eq 0) { Sync-HikPeopleToCloud }
+            Sync-HikEventsOnly
+        } catch {
+            Write-SyncLog "SyncLoop iteration error (will retry next cycle): $($_.Exception.Message)"
+        }
+        $counter++
+        Start-Sleep -Seconds $IntervalSeconds
+    }
 }
 
 switch ($Action) {
@@ -448,6 +468,7 @@ switch ($Action) {
     "ExportAttendance"  { Export-HikAttendance -Start $StartTime -End $EndTime -OutCsv $ExportCsvPath }
     "SyncPeople"        { Sync-HikPeopleToCloud }
     "SyncEvents"        { Sync-HikEventsToCloud }
+    "SyncLoop"          { Start-HikSyncLoop -IntervalSeconds $LoopIntervalSeconds -PeopleSyncEveryN $LoopPeopleSyncEveryN }
     "All" {
         Get-DeviceInfo
         Get-Capabilities
