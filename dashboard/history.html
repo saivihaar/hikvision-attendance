@@ -30,6 +30,9 @@
 <main>
   <div class="card">
     <h2>History</h2>
+
+    <div id="peopleChips" class="people-chips"></div>
+
     <div class="filters">
       <label>From
         <input type="date" id="fromDate">
@@ -38,11 +41,15 @@
         <input type="date" id="toDate">
       </label>
       <label>Person
-        <select id="personFilter"><option value="">All</option></select>
+        <select id="personFilter"><option value="">All employees</option></select>
       </label>
       <button class="primary" id="searchBtn">Search</button>
       <button class="secondary" id="exportBtn">Export CSV</button>
     </div>
+
+    <div id="personSummary" class="person-summary"></div>
+    <div id="timelineWrap"></div>
+
     <div id="resultsInfo"></div>
     <table id="resultsTable">
       <thead>
