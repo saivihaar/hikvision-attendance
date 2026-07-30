@@ -173,11 +173,28 @@ main {
   letter-spacing: 0.01em;
 }
 
+.shift-section-label {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 22px 0 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.shift-section-label:first-child { margin-top: 4px; padding-top: 0; border-top: none; }
+.shift-hint {
+  font-family: "Inter", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
 .status-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 14px;
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .status-card {
@@ -195,6 +212,21 @@ main {
 }
 .status-card.out {
   opacity: 0.72;
+}
+.status-card.late {
+  border-color: var(--danger);
+}
+.late-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--danger);
+  color: #1a0d0a;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 999px;
 }
 .status-card .name {
   font-weight: 600;
@@ -301,6 +333,15 @@ button.secondary:hover { border-color: var(--gold); color: var(--gold-bright); }
   border-color: transparent;
   font-weight: 600;
 }
+.chip-group-label {
+  align-self: center;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 2px 0 6px;
+}
+.chip-group-label:first-of-type { margin-left: 8px; }
 
 .person-summary {
   display: flex;
@@ -361,6 +402,16 @@ button.secondary:hover { border-color: var(--gold); color: var(--gold-bright); }
 .tl-arrow { color: var(--text-muted); }
 .tl-dur { margin-left: auto; color: var(--text-muted); font-size: 0.8rem; }
 .tl-pending { color: var(--danger); font-size: 0.82rem; font-style: italic; }
+.tl-late {
+  background: var(--danger);
+  color: #1a0d0a;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  margin-left: -4px;
+}
 
 #resultsInfo {
   color: var(--text-muted);

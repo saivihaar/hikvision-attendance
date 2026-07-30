@@ -2,12 +2,17 @@
 -- Run this once in Supabase's SQL Editor (Project -> SQL Editor -> New query -> paste -> Run).
 
 -- People enrolled on the device, mirrored to the cloud
+-- shift_type/expected_in_time/expected_out_time support night-shift staff
+-- whose "day" runs overnight (e.g. in 6:30-7pm, out 9-9:30am next morning).
 create table if not exists people (
-  employee_no   text primary key,
-  name          text not null,
-  active        boolean not null default true,
-  created_at    timestamptz not null default now(),
-  updated_at    timestamptz not null default now()
+  employee_no        text primary key,
+  name                text not null,
+  active              boolean not null default true,
+  shift_type          text not null default 'day' check (shift_type in ('day', 'night')),
+  expected_in_time    time,
+  expected_out_time   time,
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now()
 );
 
 -- Raw attendance/verification events pulled from the device's AcsEvent search
@@ -42,7 +47,10 @@ create table if not exists sync_state (
 
 -- Computed "currently in/out" status per person.
 -- HEURISTIC, not device truth: this device does not support hardware check-in/check-out
--- distinction, so we alternate IN/OUT per successful scan per person per local day.
+-- distinction, so we alternate IN/OUT per successful scan per person per shift-day.
+-- For 'night' shift people, a shift-day runs from evening to the next morning:
+-- any scan before noon local time is attributed to the PREVIOUS calendar date's
+-- shift, so an evening check-in and next-morning check-out pair up correctly.
 -- Ignores 'face_fail' and any event_type not in the success list below.
 create or replace view current_status
 with (security_invoker = true) as
@@ -50,10 +58,16 @@ with ranked as (
   select
     e.employee_no,
     p.name,
+    p.shift_type,
     e.event_time,
     e.event_type,
     row_number() over (
-      partition by e.employee_no, (e.event_time at time zone 'Asia/Kolkata')::date
+      partition by e.employee_no,
+        case
+          when p.shift_type = 'night' and extract(hour from (e.event_time at time zone 'Asia/Kolkata')) < 12
+            then ((e.event_time at time zone 'Asia/Kolkata')::date - interval '1 day')::date
+          else (e.event_time at time zone 'Asia/Kolkata')::date
+        end
       order by e.event_time asc
     ) as scan_seq
   from events e
@@ -61,16 +75,18 @@ with ranked as (
   where e.event_type in ('face_success','card_success','fingerprint_success')
 ),
 latest as (
-  select distinct on (employee_no) employee_no, name, event_time, event_type, scan_seq
+  select distinct on (employee_no) employee_no, name, shift_type, event_time, event_type, scan_seq
   from ranked
   order by employee_no, event_time desc
 )
 select
-  employee_no, name,
-  event_time as last_event_time,
-  event_type as last_event_type,
-  case when scan_seq % 2 = 1 then 'IN' else 'OUT' end as status
-from latest;
+  l.employee_no, l.name, l.shift_type,
+  l.event_time as last_event_time,
+  l.event_type as last_event_type,
+  case when l.scan_seq % 2 = 1 then 'IN' else 'OUT' end as status,
+  p.expected_in_time, p.expected_out_time
+from latest l
+join people p on p.employee_no = l.employee_no;
 
 -- Row Level Security: logged-in (authenticated) users get read-only access.
 -- The local sync agent writes using the service_role key, which bypasses RLS entirely.

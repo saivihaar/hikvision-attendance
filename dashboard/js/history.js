@@ -14,23 +14,47 @@ document.getElementById("toDate").value = todayStr();
 
 let lastResults = [];
 let peopleList = [];
+let selectedPerson = null;
+
+function parseTimeStr(t) {
+  if (!t) return null;
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+function timeOfDayMinutes(dateObj) {
+  return dateObj.getHours() * 60 + dateObj.getMinutes();
+}
 
 async function loadPeopleFilter() {
   const select = document.getElementById("personFilter");
-  const { data, error } = await supabaseClient.from("people").select("employee_no, name").order("name");
+  const { data, error } = await supabaseClient
+    .from("people")
+    .select("employee_no, name, shift_type, expected_in_time, expected_out_time")
+    .order("name");
   if (error || !data) return;
   peopleList = data;
 
   data.forEach((p) => {
     const opt = document.createElement("option");
     opt.value = p.employee_no;
-    opt.textContent = `${p.name} (${p.employee_no})`;
+    opt.textContent = `${p.name} (${p.employee_no})${p.shift_type === "night" ? " - Night" : ""}`;
     select.appendChild(opt);
   });
 
+  const dayPeople = data.filter((p) => p.shift_type !== "night");
+  const nightPeople = data.filter((p) => p.shift_type === "night");
+
   const chipsWrap = document.getElementById("peopleChips");
-  chipsWrap.innerHTML = `<button type="button" class="chip active" data-emp="">All</button>` +
-    data.map((p) => `<button type="button" class="chip" data-emp="${p.employee_no}">${p.name}</button>`).join("");
+  let html = `<button type="button" class="chip active" data-emp="">All</button>`;
+  if (dayPeople.length) {
+    html += `<span class="chip-group-label">Day</span>` +
+      dayPeople.map((p) => `<button type="button" class="chip" data-emp="${p.employee_no}">${p.name}</button>`).join("");
+  }
+  if (nightPeople.length) {
+    html += `<span class="chip-group-label">Night</span>` +
+      nightPeople.map((p) => `<button type="button" class="chip" data-emp="${p.employee_no}">${p.name}</button>`).join("");
+  }
+  chipsWrap.innerHTML = html;
 
   chipsWrap.querySelectorAll(".chip").forEach((chip) => {
     chip.addEventListener("click", () => {
@@ -50,7 +74,16 @@ function formatDuration(ms) {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
-function buildTimeline(events) {
+function shiftDateKey(eventTime, isNight) {
+  const d = new Date(eventTime);
+  if (isNight && d.getHours() < 12) {
+    d.setDate(d.getDate() - 1);
+  }
+  return d.toLocaleDateString("en-CA");
+}
+
+function buildTimeline(events, person) {
+  const isNight = person && person.shift_type === "night";
   const successEvents = events
     .filter((e) => SUCCESS_TYPES.includes(e.event_type))
     .slice()
@@ -58,7 +91,7 @@ function buildTimeline(events) {
 
   const byDay = {};
   successEvents.forEach((e) => {
-    const key = new Date(e.event_time).toLocaleDateString("en-CA");
+    const key = shiftDateKey(e.event_time, isNight);
     (byDay[key] = byDay[key] || []).push(e);
   });
 
@@ -73,7 +106,14 @@ function buildTimeline(events) {
   });
 }
 
-function renderTimeline(days) {
+function lateBadge(eventTime, expectedTimeStr) {
+  if (!expectedTimeStr) return "";
+  const deadline = parseTimeStr(expectedTimeStr);
+  const actual = timeOfDayMinutes(new Date(eventTime));
+  return actual > deadline ? '<span class="tl-late">LATE</span>' : "";
+}
+
+function renderTimeline(days, person) {
   const summary = document.getElementById("personSummary");
   const wrap = document.getElementById("timelineWrap");
 
@@ -84,9 +124,14 @@ function renderTimeline(days) {
   }
 
   const grandTotalMs = days.reduce((s, d) => s + d.totalMs, 0);
+  const expectedNote = person && person.shift_type === "night"
+    ? `<div class="summary-stat"><span class="num">In by ${person.expected_in_time?.slice(0,5) || "-"}</span><span class="label">Expected in</span></div>
+       <div class="summary-stat"><span class="num">Out by ${person.expected_out_time?.slice(0,5) || "-"}</span><span class="label">Expected out</span></div>`
+    : "";
   summary.innerHTML = `
     <div class="summary-stat"><span class="num">${days.length}</span><span class="label">day(s) present</span></div>
     <div class="summary-stat"><span class="num">${formatDuration(grandTotalMs)}</span><span class="label">total time (paired scans)</span></div>
+    ${expectedNote}
   `;
 
   wrap.innerHTML = days.map((day) => {
@@ -95,18 +140,20 @@ function renderTimeline(days) {
     });
     const rows = day.pairs.map((p) => {
       const inTime = new Date(p.in.event_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const inLate = person ? lateBadge(p.in.event_time, person.expected_in_time) : "";
       if (p.out) {
         const outTime = new Date(p.out.event_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        const outLate = person ? lateBadge(p.out.event_time, person.expected_out_time) : "";
         const dur = formatDuration(new Date(p.out.event_time) - new Date(p.in.event_time));
         return `<div class="tl-row">
-          <span class="tl-badge in">IN ${inTime}</span>
+          <span class="tl-badge in">IN ${inTime}</span>${inLate}
           <span class="tl-arrow">&#8594;</span>
-          <span class="tl-badge out">OUT ${outTime}</span>
+          <span class="tl-badge out">OUT ${outTime}</span>${outLate}
           <span class="tl-dur">${dur}</span>
         </div>`;
       }
       return `<div class="tl-row">
-        <span class="tl-badge in">IN ${inTime}</span>
+        <span class="tl-badge in">IN ${inTime}</span>${inLate}
         <span class="tl-arrow">&#8594;</span>
         <span class="tl-pending">no checkout recorded</span>
       </div>`;
@@ -124,6 +171,8 @@ async function runSearch() {
   const personNo = document.getElementById("personFilter").value;
   const info = document.getElementById("resultsInfo");
   const body = document.getElementById("resultsBody");
+
+  selectedPerson = personNo ? peopleList.find((p) => p.employee_no === personNo) : null;
 
   const fromIso = new Date(`${from}T00:00:00`).toISOString();
   const toIso = new Date(`${to}T23:59:59`).toISOString();
@@ -159,7 +208,7 @@ async function runSearch() {
     </tr>`).join("");
 
   if (personNo) {
-    renderTimeline(buildTimeline(lastResults));
+    renderTimeline(buildTimeline(lastResults, selectedPerson), selectedPerson);
   } else {
     document.getElementById("personSummary").innerHTML = "";
     document.getElementById("timelineWrap").innerHTML = "";
