@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sai Vihaar - Live Attendance</title>
+<title>Sai Vihaar - Monthly Summary</title>
 <link rel="icon" href="img/logo.jpg">
 <link rel="stylesheet" href="css/style.css">
 <script src="js/theme.js"></script>
@@ -18,9 +18,9 @@
     </div>
   </div>
   <nav>
-    <a href="dashboard.html" class="active">Live</a>
+    <a href="dashboard.html">Live</a>
     <a href="history.html">History</a>
-    <a href="monthly.html">Monthly</a>
+    <a href="monthly.html" class="active">Monthly</a>
   </nav>
   <div class="header-actions">
     <button type="button" class="theme-toggle" aria-label="Toggle theme"></button>
@@ -30,15 +30,33 @@
 
 <main>
   <div class="card">
-    <h2>Who's in / out right now</h2>
-    <p id="staleNote" class="stale-note"></p>
-    <div id="statusGrid">Loading...</div>
+    <h2>Monthly Summary</h2>
+    <p class="trend-chart-sub">Total hours worked per person - handy for payroll cross-checking.</p>
+
+    <div class="filters">
+      <label>Month
+        <input type="month" id="monthPicker">
+      </label>
+      <button class="primary" id="generateBtn">Generate</button>
+    </div>
+
+    <div id="monthlyInfo"></div>
+    <div class="table-wrap">
+      <table id="monthlyTable">
+        <thead>
+          <tr><th>Employee</th><th>Shift</th><th>Days Present</th><th>Total Hours</th><th>Avg Hours / Day</th></tr>
+        </thead>
+        <tbody id="monthlyBody"></tbody>
+        <tfoot id="monthlyFoot"></tfoot>
+      </table>
+    </div>
   </div>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-client.js"></script>
 <script src="js/auth-guard.js"></script>
-<script src="js/dashboard.js"></script>
+<script src="js/attendance-utils.js"></script>
+<script src="js/monthly.js"></script>
 </body>
 </html>
