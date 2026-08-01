@@ -189,10 +189,22 @@ function renderOverallSummary(events) {
   const successCount = events.filter((e) => SUCCESS_TYPES.includes(e.event_type)).length;
   const failCount = events.filter((e) => e.event_type === "face_fail").length;
   const uniquePeople = new Set(events.map((e) => e.employee_no)).size;
+
+  const byEmployee = {};
+  events.forEach((e) => {
+    (byEmployee[e.employee_no] = byEmployee[e.employee_no] || []).push(e);
+  });
+  const totalMs = Object.keys(byEmployee).reduce((sum, empNo) => {
+    const person = peopleList.find((p) => p.employee_no === empNo);
+    const days = buildTimeline(byEmployee[empNo], person);
+    return sum + days.reduce((s, d) => s + d.totalMs, 0);
+  }, 0);
+
   wrap.innerHTML = `
     <div class="summary-stat"><span class="num">${events.length}</span><span class="label">total events</span></div>
     <div class="summary-stat"><span class="num">${successCount}</span><span class="label">successful scans</span></div>
     <div class="summary-stat"><span class="num">${uniquePeople}</span><span class="label">people active</span></div>
+    <div class="summary-stat"><span class="num">${formatDuration(totalMs)}</span><span class="label">total hours worked</span></div>
     ${failCount ? `<div class="summary-stat"><span class="num">${failCount}</span><span class="label">failed attempts</span></div>` : ""}
   `;
 }
