@@ -1,13 +1,21 @@
+function formatDMY(dateObj) {
+  const d = String(dateObj.getDate()).padStart(2, "0");
+  const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const y = dateObj.getFullYear();
+  const time = dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return `${d}/${m}/${y} ${time}`;
+}
+
 function renderPersonCard(person) {
   const cls = person.status === "IN" ? "in" : "out";
-  const time = new Date(person.last_event_time).toLocaleString();
+  const lastUpdate = formatDMY(new Date(person.last_event_time));
   const isNight = person.shift_type === "night";
   return `
     <div class="status-card ${cls}">
       ${isNight ? '<span class="night-badge">NIGHT</span>' : ""}
       <div class="name">${person.name}</div>
       <div class="status">${person.status}</div>
-      <div class="time">since ${time}</div>
+      <div class="time">${lastUpdate}</div>
     </div>`;
 }
 
