@@ -216,6 +216,34 @@ morning), run `cloud/migration-shifts.sql` in Supabase's SQL Editor once - it ad
 one shift instead of splitting across two calendar days. Edit the `employee_no`
 values in that file to match your actual night-shift staff first.
 
+## Disaster recovery: if this PC is lost, stolen, or replaced
+
+**Your attendance data is already safe regardless of this PC** — every event and
+person record lives in Supabase (a cloud service), not on this computer. Losing
+this PC loses zero historical data; it only means you need a new machine to run
+the sync agent from. Here's how to get back up and running on a new PC:
+
+1. Install Git and PowerShell (PowerShell ships with Windows already).
+2. Clone this repo: `git clone https://github.com/saivihaar/hikvision-attendance.git`
+3. Re-create the two secret files (these are intentionally **not** in git - see
+   "Configure the script" and "Wire up the local sync agent" above):
+   - `device-secrets.json` — the device's admin password (if you don't remember it,
+     redo the SADP/Hik-Partner Pro reset from section 1)
+   - `cloud-config.json` — your Supabase URL + secret key (find these again under
+     Supabase → Project Settings → API; the project itself is untouched by losing
+     this PC, since it's cloud-hosted)
+4. Confirm the device's current IP hasn't drifted (`arp -a | grep e0-ba-ad`) and
+   update `$DeviceIP` in `configure-terminal.ps1` if it has.
+5. Re-run the SYSTEM service registration command from section 5.2 (Task Scheduler
+   settings don't survive a PC replacement — this is the one manual step to redo).
+6. Run `.\configure-terminal.ps1 -Action SyncEvents` once to confirm it connects
+   and to backfill anything that happened between the old PC dying and the new one
+   coming online (the device keeps its own event history independently).
+
+The dashboard itself needs no recovery action at all — it's already live at its
+Cloudflare URL and reads straight from Supabase, unaffected by anything happening
+to this PC.
+
 ## Notes / things that were verified vs. assumed
 
 - **Verified via live probe:** device IP, MAC, model realm, ports 8000/80 open, ISAPI endpoints
