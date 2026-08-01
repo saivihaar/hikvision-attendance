@@ -138,18 +138,30 @@ a timer, `configure-terminal.ps1 -Action LiveStream` opens a persistent connecti
 the device's own event stream, so a successful check-in/check-out pushes to the
 dashboard the instant it happens - no polling delay at all.
 
-Double-click **`Start-Live-Sync.bat`** to start it. Leave the window open (or
-minimized) for as long as you want live updates. Closing it just stops new events
-from syncing - nothing else breaks.
+For manual/occasional use, double-click **`Start-Live-Sync.bat`** to start it. Leave
+the window open (or minimized) for as long as you want live updates. Closing it just
+stops new events from syncing - nothing else breaks. It refuses to start a second
+copy if one's already running (the device only allows a couple of concurrent
+connections, and running two would break both).
 
-**Auto-start at every login (no clicking required):** a shortcut is already placed in
-your Windows Startup folder (`shell:startup`), so this starts automatically each time
-you log in - Task Scheduler blocks automatic startup triggers on this machine, but the
-Startup folder doesn't have that restriction. Note this only survives sleep, not a full
-shutdown/restart - after those, either wait for next login or double-click the file
-yourself. The `.bat` refuses to start a second copy if one's already running (the
-device only allows a couple of concurrent connections, and running two would break
-both).
+**Permanent, zero-touch setup (recommended) - runs as a real background service.**
+This survives full shutdowns/restarts with no login required at all, not just sleep.
+It needs one-time setup from an **elevated (Run as Administrator)** PowerShell window:
+
+```powershell
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument '-NoProfile -ExecutionPolicy Bypass -File "C:\Users\saivi\OneDrive\Desktop\hikvision-attendance\configure-terminal.ps1" -Action LiveStream'
+$trigger = New-ScheduledTaskTrigger -AtStartup
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew
+Unregister-ScheduledTask -TaskName "HikvisionLiveSyncService" -Confirm:$false -ErrorAction SilentlyContinue
+Register-ScheduledTask -TaskName "HikvisionLiveSyncService" -Action $action -Trigger $trigger -Principal $principal -Settings $settings
+```
+
+This registers `HikvisionLiveSyncService`, which starts at boot as the `SYSTEM`
+account (no password stored, no login needed), runs with no execution time limit,
+and auto-restarts itself (up to 999 times) if it ever crashes. Verify it with
+`Get-ScheduledTask -TaskName "HikvisionLiveSyncService"` (also needs an elevated
+window - even just viewing a SYSTEM-owned task requires admin rights).
 
 One device quirk worth knowing: this terminal only allows a small number of
 simultaneous live-stream connections. If it ever gets stuck refusing new connections
@@ -182,14 +194,27 @@ $req.GetResponse() | Out-Null
 
 ### 5.4 What the manager sees
 
-- **Live tab** — a card per person, green "IN" / gray "OUT", updates automatically
-  as new scans come in, plus a "last synced" timestamp.
-- **History tab** — date range + person filter, results table, "Export CSV" button.
+- **Live tab** — a card per person grouped by Day/Night shift, gold "IN" / gray "OUT",
+  a gold "NIGHT" tag on night-shift cards, live-updating as new scans come in, plus a
+  "last synced" timestamp that warns if the sync service has gone quiet.
+- **History tab** — date-range presets, per-person quick-select chips, a daily
+  attendance trend chart, summary stats (including total hours worked), and a
+  day-by-day IN/OUT timeline for every person shown by default (click a name/chip to
+  focus on just them). No CSV export - everything is viewed directly on the page.
 
 Note: "IN"/"OUT" is inferred by alternating each person's successive successful
-scans per day — the terminal itself doesn't report check-in vs. check-out, so this
-is a best-effort heuristic, not device truth. A double-scan (e.g. a misread retry)
-will flip it incorrectly until their next real scan.
+scans per shift-day — the terminal itself doesn't report check-in vs. check-out, so
+this is a best-effort heuristic, not device truth. A double-scan (e.g. a misread
+retry) will flip it incorrectly until their next real scan.
+
+### 5.5 Night shift setup
+
+For staff whose shift runs overnight (e.g. in by 7pm, out by 9:30am the next
+morning), run `cloud/migration-shifts.sql` in Supabase's SQL Editor once - it adds
+`shift_type`/`expected_in_time`/`expected_out_time` to `people` and updates the
+`current_status` view so an evening check-in and next-morning check-out pair up as
+one shift instead of splitting across two calendar days. Edit the `employee_no`
+values in that file to match your actual night-shift staff first.
 
 ## Notes / things that were verified vs. assumed
 
