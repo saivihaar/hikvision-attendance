@@ -419,6 +419,22 @@ button.secondary:hover { border-color: var(--gold); color: var(--gold-bright); }
   margin-bottom: 4px;
 }
 
+.table-wrap {
+  overflow-x: auto;
+}
+
+.event-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.event-badge.success { background: rgba(201, 160, 92, 0.18); color: var(--gold-bright); }
+.event-badge.fail { background: rgba(201, 106, 92, 0.18); color: var(--danger); }
+.event-badge.other { background: rgba(140, 140, 140, 0.15); color: var(--text-muted); }
+
 table {
   width: 100%;
   border-collapse: collapse;

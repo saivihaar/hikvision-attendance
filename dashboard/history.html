@@ -44,19 +44,21 @@
         <select id="personFilter"><option value="">All employees</option></select>
       </label>
       <button class="primary" id="searchBtn">Search</button>
-      <button class="secondary" id="exportBtn">Export CSV</button>
     </div>
 
+    <div id="overallSummary" class="person-summary"></div>
     <div id="personSummary" class="person-summary"></div>
     <div id="timelineWrap"></div>
 
     <div id="resultsInfo"></div>
-    <table id="resultsTable">
-      <thead>
-        <tr><th>Time</th><th>Employee No</th><th>Name</th><th>Event</th><th>Verify Mode</th><th>Door</th></tr>
-      </thead>
-      <tbody id="resultsBody"></tbody>
-    </table>
+    <div class="table-wrap">
+      <table id="resultsTable">
+        <thead>
+          <tr><th>Time</th><th>Employee No</th><th>Name</th><th>Event</th><th>Verify Mode</th><th>Door</th></tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
   </div>
 </main>
 

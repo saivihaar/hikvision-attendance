@@ -106,6 +106,35 @@ function buildTimeline(events, person) {
   });
 }
 
+function eventTypeBadge(type) {
+  const labels = {
+    face_success: "Face",
+    card_success: "Card",
+    fingerprint_success: "Fingerprint",
+    face_fail: "Failed",
+    other: "Other",
+  };
+  const cls = SUCCESS_TYPES.includes(type) ? "success" : (type === "face_fail" ? "fail" : "other");
+  return `<span class="event-badge ${cls}">${labels[type] || type}</span>`;
+}
+
+function renderOverallSummary(events) {
+  const wrap = document.getElementById("overallSummary");
+  if (!events.length) {
+    wrap.innerHTML = "";
+    return;
+  }
+  const successCount = events.filter((e) => SUCCESS_TYPES.includes(e.event_type)).length;
+  const failCount = events.filter((e) => e.event_type === "face_fail").length;
+  const uniquePeople = new Set(events.map((e) => e.employee_no)).size;
+  wrap.innerHTML = `
+    <div class="summary-stat"><span class="num">${events.length}</span><span class="label">total events</span></div>
+    <div class="summary-stat"><span class="num">${successCount}</span><span class="label">successful scans</span></div>
+    <div class="summary-stat"><span class="num">${uniquePeople}</span><span class="label">people active</span></div>
+    ${failCount ? `<div class="summary-stat"><span class="num">${failCount}</span><span class="label">failed attempts</span></div>` : ""}
+  `;
+}
+
 function lateBadge(eventTime, expectedTimeStr) {
   if (!expectedTimeStr) return "";
   const deadline = parseTimeStr(expectedTimeStr);
@@ -202,47 +231,22 @@ async function runSearch() {
       <td>${new Date(e.event_time).toLocaleString()}</td>
       <td>${e.employee_no}</td>
       <td>${e.people ? e.people.name : ""}</td>
-      <td>${e.event_type}</td>
+      <td>${eventTypeBadge(e.event_type)}</td>
       <td>${e.verify_mode || ""}</td>
       <td>${e.door_no ?? ""}</td>
     </tr>`).join("");
 
   if (personNo) {
+    document.getElementById("overallSummary").innerHTML = "";
     renderTimeline(buildTimeline(lastResults, selectedPerson), selectedPerson);
   } else {
     document.getElementById("personSummary").innerHTML = "";
     document.getElementById("timelineWrap").innerHTML = "";
+    renderOverallSummary(lastResults);
   }
-}
-
-function exportCsv() {
-  if (lastResults.length === 0) {
-    alert("Run a search first.");
-    return;
-  }
-  const header = ["Time", "Employee No", "Name", "Event", "Verify Mode", "Door"];
-  const rows = lastResults.map((e) => [
-    new Date(e.event_time).toLocaleString(),
-    e.employee_no,
-    e.people ? e.people.name : "",
-    e.event_type,
-    e.verify_mode || "",
-    e.door_no ?? "",
-  ]);
-  const csv = [header, ...rows]
-    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-    .join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `attendance-${document.getElementById("fromDate").value}-to-${document.getElementById("toDate").value}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
 document.getElementById("searchBtn").addEventListener("click", runSearch);
-document.getElementById("exportBtn").addEventListener("click", exportCsv);
 document.getElementById("personFilter").addEventListener("change", () => {
   document.querySelectorAll(".chip").forEach((c) => {
     c.classList.toggle("active", c.dataset.emp === document.getElementById("personFilter").value);
