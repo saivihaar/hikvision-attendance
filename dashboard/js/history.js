@@ -66,6 +66,11 @@ async function loadPeopleFilter() {
   });
 }
 
+function nameForEmployee(empNo) {
+  const person = peopleList.find((p) => p.employee_no === empNo);
+  return person ? person.name : empNo;
+}
+
 function formatDuration(ms) {
   if (ms <= 0) return "0m";
   const totalMin = Math.round(ms / 60000);
@@ -297,7 +302,7 @@ async function runSearch() {
 
   let query = supabaseClient
     .from("events")
-    .select("event_time, employee_no, event_type, verify_mode, door_no, people(name)")
+    .select("event_time, employee_no, event_type, verify_mode, door_no")
     .gte("event_time", fromIso)
     .lte("event_time", toIso)
     .order("event_time", { ascending: false });
@@ -319,7 +324,7 @@ async function runSearch() {
     <tr>
       <td>${new Date(e.event_time).toLocaleString()}</td>
       <td>${e.employee_no}</td>
-      <td>${e.people ? e.people.name : ""}</td>
+      <td>${nameForEmployee(e.employee_no)}</td>
       <td>${eventTypeBadge(e.event_type)}</td>
       <td>${e.verify_mode || ""}</td>
       <td>${e.door_no ?? ""}</td>
