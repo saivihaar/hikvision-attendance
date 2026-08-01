@@ -319,6 +319,20 @@ async function runSearch() {
   }
 
   lastResults = data || [];
+
+  if (lastResults.length === 0) {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) {
+      info.innerHTML = `<span style="color:var(--danger);">Your login session has expired. <a href="login.html" style="color:var(--gold-bright);">Log in again</a> to see your data.</span>`;
+      body.innerHTML = "";
+      document.getElementById("personSummary").innerHTML = "";
+      document.getElementById("timelineWrap").innerHTML = "";
+      document.getElementById("overallSummary").innerHTML = "";
+      document.getElementById("trendChart").innerHTML = "";
+      return;
+    }
+  }
+
   info.textContent = `${lastResults.length} event(s) found`;
   body.innerHTML = lastResults.map((e) => `
     <tr>

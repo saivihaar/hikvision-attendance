@@ -45,6 +45,11 @@ async function loadStatus() {
   }
 
   if (!data || data.length === 0) {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) {
+      grid.innerHTML = `<p style="color:var(--danger);">Your login session has expired. <a href="login.html" style="color:var(--gold-bright);">Log in again</a> to see live status.</p>`;
+      return;
+    }
     grid.innerHTML = "<p>No attendance events synced yet.</p>";
     return;
   }
