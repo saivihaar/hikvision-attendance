@@ -118,6 +118,63 @@ function eventTypeBadge(type) {
   return `<span class="event-badge ${cls}">${labels[type] || type}</span>`;
 }
 
+function renderTrendChart(events) {
+  const container = document.getElementById("trendChart");
+  const successEvents = events.filter((e) => SUCCESS_TYPES.includes(e.event_type));
+  if (successEvents.length === 0) {
+    container.innerHTML = "";
+    return;
+  }
+
+  const byDate = {};
+  successEvents.forEach((e) => {
+    const key = new Date(e.event_time).toLocaleDateString("en-CA");
+    byDate[key] = (byDate[key] || 0) + 1;
+  });
+  const dates = Object.keys(byDate).sort();
+  const maxCount = Math.max(...dates.map((d) => byDate[d]));
+
+  const width = Math.max(container.clientWidth || 600, 300);
+  const height = 160;
+  const padding = { top: 10, right: 10, bottom: 20, left: 10 };
+  const chartW = width - padding.left - padding.right;
+  const chartH = height - padding.top - padding.bottom;
+  const barSlot = chartW / dates.length;
+  const barWidth = Math.max(2, Math.min(24, barSlot - 2));
+
+  const fmtLabel = (d) => new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
+  const bars = dates.map((d, i) => {
+    const count = byDate[d];
+    const barH = Math.max((count / maxCount) * chartH, 2);
+    const x = padding.left + i * barSlot + (barSlot - barWidth) / 2;
+    const y = padding.top + (chartH - barH);
+    const label = fmtLabel(d);
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barWidth.toFixed(1)}" height="${barH.toFixed(1)}" rx="4" ry="4" tabindex="0" class="trend-bar"><title>${label}: ${count} scan${count === 1 ? "" : "s"}</title></rect>`;
+  }).join("");
+
+  // Sparse x-axis labels: first, middle, last (avoid clutter on long ranges)
+  const labelIdx = dates.length <= 3
+    ? dates.map((_, i) => i)
+    : [0, Math.floor((dates.length - 1) / 2), dates.length - 1];
+  const axisLabels = labelIdx.map((i) => {
+    const x = padding.left + i * barSlot + barSlot / 2;
+    return `<text x="${x.toFixed(1)}" y="${height - 4}" text-anchor="middle" class="trend-axis-label">${fmtLabel(dates[i])}</text>`;
+  }).join("");
+
+  container.innerHTML = `
+    <div class="card trend-chart-card">
+      <h2>Attendance Trend</h2>
+      <p class="trend-chart-sub">Successful check-ins per day${dates.length > 1 ? ` (peak: ${maxCount}/day)` : ""}</p>
+      <svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}" preserveAspectRatio="none" role="img" aria-label="Daily successful check-in counts">
+        <line x1="${padding.left}" y1="${(padding.top + chartH).toFixed(1)}" x2="${width - padding.right}" y2="${(padding.top + chartH).toFixed(1)}" stroke="var(--border)" stroke-width="1"/>
+        ${bars}
+        ${axisLabels}
+      </svg>
+    </div>
+  `;
+}
+
 function renderOverallSummary(events) {
   const wrap = document.getElementById("overallSummary");
   if (!events.length) {
@@ -268,6 +325,8 @@ async function runSearch() {
       <td>${e.door_no ?? ""}</td>
     </tr>`).join("");
 
+  renderTrendChart(lastResults);
+
   if (personNo) {
     document.getElementById("overallSummary").innerHTML = "";
     renderTimeline(buildTimeline(lastResults, selectedPerson), selectedPerson);
@@ -277,6 +336,26 @@ async function runSearch() {
     renderAllPeopleTimelines(lastResults);
   }
 }
+
+function applyDatePreset(days) {
+  document.getElementById("fromDate").value = days === 0 ? todayStr() : daysAgoStr(days);
+  document.getElementById("toDate").value = days === 1 ? daysAgoStr(1) : todayStr();
+}
+
+document.querySelectorAll(".preset-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".preset-btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    applyDatePreset(Number(btn.dataset.days));
+    runSearch();
+  });
+});
+document.getElementById("fromDate").addEventListener("change", () => {
+  document.querySelectorAll(".preset-btn").forEach((b) => b.classList.remove("active"));
+});
+document.getElementById("toDate").addEventListener("change", () => {
+  document.querySelectorAll(".preset-btn").forEach((b) => b.classList.remove("active"));
+});
 
 document.getElementById("searchBtn").addEventListener("click", runSearch);
 document.getElementById("personFilter").addEventListener("change", () => {

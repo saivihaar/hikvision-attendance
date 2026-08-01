@@ -254,6 +254,51 @@ main {
   margin-bottom: 0;
 }
 
+.date-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.preset-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.preset-btn:hover { border-color: var(--gold); color: var(--gold-bright); }
+.preset-btn.active {
+  background: linear-gradient(160deg, var(--gold-bright), var(--gold-dim));
+  color: #1a1408;
+  border-color: transparent;
+  font-weight: 600;
+}
+
+.trend-chart-card { margin-bottom: 16px; }
+.trend-chart-card h2 { margin-bottom: 2px; }
+.trend-chart-sub {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  margin: 0 0 10px;
+}
+.trend-bar {
+  fill: var(--gold-bright);
+  transition: fill 0.1s ease;
+}
+.trend-bar:hover, .trend-bar:focus {
+  fill: var(--gold);
+  outline: none;
+}
+.trend-axis-label {
+  fill: var(--text-muted);
+  font-size: 10px;
+  font-family: "Inter", sans-serif;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;

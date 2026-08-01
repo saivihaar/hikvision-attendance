@@ -33,6 +33,12 @@
 
     <div id="peopleChips" class="people-chips"></div>
 
+    <div class="date-presets">
+      <button type="button" class="preset-btn" data-days="0">Today</button>
+      <button type="button" class="preset-btn" data-days="1">Yesterday</button>
+      <button type="button" class="preset-btn" data-days="7">Last 7 days</button>
+      <button type="button" class="preset-btn active" data-days="30">Last 30 days</button>
+    </div>
     <div class="filters">
       <label>From
         <input type="date" id="fromDate">
@@ -47,6 +53,7 @@
     </div>
 
     <div id="overallSummary" class="person-summary"></div>
+    <div id="trendChart"></div>
     <div id="personSummary" class="person-summary"></div>
     <div id="timelineWrap"></div>
 
