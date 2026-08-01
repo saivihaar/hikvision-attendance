@@ -1,6 +1,13 @@
 # Hikvision DS-K1T320EFWX Attendance Setup
 
-Device found on your LAN: `192.168.0.144` (MAC `e0-ba-ad-9c-cc-af`, port 8000 SDK / port 80 HTTP).
+Device found on your LAN: `192.168.0.121` (MAC `e0-ba-ad-9c-cc-af`, port 8000 SDK / port 80 HTTP).
+
+**Important:** this IP is assigned by DHCP and *will* change again if the device
+reboots or its lease expires - it already moved once (from `.144` to `.121`), which
+silently broke syncing for two days until caught. Ask whoever manages your router to
+set a **DHCP reservation** (or a static IP) for MAC `e0-ba-ad-9c-cc-af`, pinning it
+permanently. Until that's done, if syncing ever goes stale again, check the device's
+current IP first (`arp -a | grep e0-ba-ad`) before assuming something else is wrong.
 
 ## 1. Activate / reset the admin account (do this yourself, in SADP or Hik-Partner Pro)
 
@@ -153,8 +160,8 @@ lost) clears it in under a minute:
 # Only needed if the log shows repeated "deployExceedMax" connection errors
 $pass = (Get-Content "C:\Users\saivi\OneDrive\Desktop\hikvision-attendance\device-secrets.json" -Raw | ConvertFrom-Json).HikPassword
 $cache = New-Object System.Net.CredentialCache
-$cache.Add([Uri]"http://192.168.0.144", "Digest", (New-Object System.Net.NetworkCredential("admin", $pass)))
-$req = [System.Net.HttpWebRequest]::Create("http://192.168.0.144/ISAPI/System/reboot")
+$cache.Add([Uri]"http://192.168.0.121", "Digest", (New-Object System.Net.NetworkCredential("admin", $pass)))
+$req = [System.Net.HttpWebRequest]::Create("http://192.168.0.121/ISAPI/System/reboot")
 $req.Credentials = $cache; $req.Method = "PUT"; $req.ContentLength = 0
 $req.GetResponse() | Out-Null
 ```

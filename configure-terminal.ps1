@@ -6,7 +6,7 @@ without hand-rolling the digest handshake).
 #>
 
 param(
-    [string]$DeviceIP = "192.168.0.144",
+    [string]$DeviceIP = "192.168.0.121",
     [string]$HikUser  = "admin",
     [string]$HikPass,
     [string]$DeviceSecretsPath = "$PSScriptRoot\device-secrets.json",
@@ -363,7 +363,12 @@ function Write-SyncLog {
 }
 
 function Sync-HikPeopleToCloud {
-    $users = Get-HikUserList
+    try {
+        $users = Get-HikUserList
+    } catch {
+        Write-SyncLog "SyncPeople FAILED to reach device at $DeviceIP : $($_.Exception.Message)"
+        throw
+    }
     if (-not $users -or $users.Count -eq 0) {
         Write-SyncLog "SyncPeople: no users found on device"
         return
@@ -432,7 +437,7 @@ function Sync-HikEventsToCloud {
     try {
         Sync-HikPeopleToCloud
     } catch {
-        Write-SyncLog "SyncEvents ABORTED: people sync failed, not touching sync-state.json"
+        Write-SyncLog "SyncEvents ABORTED: people sync failed ($($_.Exception.Message)), not touching sync-state.json"
         return
     }
     Sync-HikEventsOnly
