@@ -376,14 +376,14 @@ button.secondary:hover { border-color: var(--gold); color: var(--gold-bright); }
   font-weight: 600;
 }
 .chip-group-label {
-  align-self: center;
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin: 0 2px 0 6px;
+  flex-basis: 100%;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 10px 0 2px;
 }
-.chip-group-label:first-of-type { margin-left: 8px; }
+.chip-group-label:first-of-type { margin-top: 0; }
 
 .person-summary {
   display: flex;
