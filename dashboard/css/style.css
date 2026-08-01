@@ -364,6 +364,29 @@ button.secondary:hover { border-color: var(--gold); color: var(--gold-bright); }
   letter-spacing: 0.05em;
 }
 
+.person-timeline-card {
+  margin-bottom: 14px;
+  padding: 16px 18px;
+}
+.person-timeline-name {
+  margin: 0 0 10px;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.person-timeline-meta {
+  margin-left: auto;
+  font-family: "Inter", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
 .tl-day {
   border: 1px solid var(--border);
   border-radius: 10px;

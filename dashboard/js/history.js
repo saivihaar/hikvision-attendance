@@ -142,28 +142,8 @@ function lateBadge(eventTime, expectedTimeStr) {
   return actual > deadline ? '<span class="tl-late">LATE</span>' : "";
 }
 
-function renderTimeline(days, person) {
-  const summary = document.getElementById("personSummary");
-  const wrap = document.getElementById("timelineWrap");
-
-  if (!days.length) {
-    summary.innerHTML = "";
-    wrap.innerHTML = "";
-    return;
-  }
-
-  const grandTotalMs = days.reduce((s, d) => s + d.totalMs, 0);
-  const expectedNote = person && person.shift_type === "night"
-    ? `<div class="summary-stat"><span class="num">In by ${person.expected_in_time?.slice(0,5) || "-"}</span><span class="label">Expected in</span></div>
-       <div class="summary-stat"><span class="num">Out by ${person.expected_out_time?.slice(0,5) || "-"}</span><span class="label">Expected out</span></div>`
-    : "";
-  summary.innerHTML = `
-    <div class="summary-stat"><span class="num">${days.length}</span><span class="label">day(s) present</span></div>
-    <div class="summary-stat"><span class="num">${formatDuration(grandTotalMs)}</span><span class="label">total time (paired scans)</span></div>
-    ${expectedNote}
-  `;
-
-  wrap.innerHTML = days.map((day) => {
+function renderDaysHtml(days, person) {
+  return days.map((day) => {
     const dateLabel = new Date(`${day.dateKey}T00:00:00`).toLocaleDateString(undefined, {
       weekday: "short", month: "short", day: "numeric", year: "numeric",
     });
@@ -192,6 +172,58 @@ function renderTimeline(days, person) {
       ${rows}
     </div>`;
   }).join("");
+}
+
+function renderTimeline(days, person) {
+  const summary = document.getElementById("personSummary");
+  const wrap = document.getElementById("timelineWrap");
+
+  if (!days.length) {
+    summary.innerHTML = "";
+    wrap.innerHTML = "";
+    return;
+  }
+
+  const grandTotalMs = days.reduce((s, d) => s + d.totalMs, 0);
+  const expectedNote = person && person.shift_type === "night"
+    ? `<div class="summary-stat"><span class="num">In by ${person.expected_in_time?.slice(0,5) || "-"}</span><span class="label">Expected in</span></div>
+       <div class="summary-stat"><span class="num">Out by ${person.expected_out_time?.slice(0,5) || "-"}</span><span class="label">Expected out</span></div>`
+    : "";
+  summary.innerHTML = `
+    <div class="summary-stat"><span class="num">${days.length}</span><span class="label">day(s) present</span></div>
+    <div class="summary-stat"><span class="num">${formatDuration(grandTotalMs)}</span><span class="label">total time (paired scans)</span></div>
+    ${expectedNote}
+  `;
+
+  wrap.innerHTML = renderDaysHtml(days, person);
+}
+
+function renderAllPeopleTimelines(events) {
+  const wrap = document.getElementById("timelineWrap");
+  const byEmployee = {};
+  events.forEach((e) => {
+    (byEmployee[e.employee_no] = byEmployee[e.employee_no] || []).push(e);
+  });
+
+  const sections = Object.keys(byEmployee).map((empNo) => {
+    const person = peopleList.find((p) => p.employee_no === empNo);
+    const name = person ? person.name : empNo;
+    const days = buildTimeline(byEmployee[empNo], person);
+    if (!days.length) return { name, html: "" };
+    const grandTotalMs = days.reduce((s, d) => s + d.totalMs, 0);
+    const nightTag = person && person.shift_type === "night" ? ` <span class="chip-group-label">Night</span>` : "";
+    return {
+      name,
+      html: `<div class="card person-timeline-card">
+        <h3 class="person-timeline-name">${name}${nightTag}<span class="person-timeline-meta">${days.length} day(s) &middot; ${formatDuration(grandTotalMs)}</span></h3>
+        ${renderDaysHtml(days, person)}
+      </div>`,
+    };
+  }).filter((s) => s.html).sort((a, b) => a.name.localeCompare(b.name));
+
+  wrap.innerHTML = sections.length
+    ? sections.map((s) => s.html).join("")
+    : `<p style="color:var(--text-muted);">No successful scans in this range.</p>`;
 }
 
 async function runSearch() {
@@ -241,8 +273,8 @@ async function runSearch() {
     renderTimeline(buildTimeline(lastResults, selectedPerson), selectedPerson);
   } else {
     document.getElementById("personSummary").innerHTML = "";
-    document.getElementById("timelineWrap").innerHTML = "";
     renderOverallSummary(lastResults);
+    renderAllPeopleTimelines(lastResults);
   }
 }
 
