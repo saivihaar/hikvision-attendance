@@ -213,15 +213,12 @@ main {
 .status-card.out {
   opacity: 0.72;
 }
-.status-card.late {
-  border-color: var(--danger);
-}
-.late-badge {
+.night-badge {
   position: absolute;
   top: 8px;
   right: 8px;
-  background: var(--danger);
-  color: #1a0d0a;
+  background: linear-gradient(160deg, var(--gold-bright), var(--gold-dim));
+  color: #1a1408;
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.04em;

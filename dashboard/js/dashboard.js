@@ -1,31 +1,10 @@
-function timeOfDayMinutes(dateObj) {
-  return dateObj.getHours() * 60 + dateObj.getMinutes();
-}
-
-function parseTimeStr(t) {
-  if (!t) return null;
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
-
-function isLate(person) {
-  const eventMinutes = timeOfDayMinutes(new Date(person.last_event_time));
-  if (person.status === "IN" && person.expected_in_time) {
-    return eventMinutes > parseTimeStr(person.expected_in_time);
-  }
-  if (person.status === "OUT" && person.expected_out_time) {
-    return eventMinutes > parseTimeStr(person.expected_out_time);
-  }
-  return false;
-}
-
 function renderPersonCard(person) {
   const cls = person.status === "IN" ? "in" : "out";
   const time = new Date(person.last_event_time).toLocaleString();
-  const late = isLate(person);
+  const isNight = person.shift_type === "night";
   return `
-    <div class="status-card ${cls}${late ? " late" : ""}">
-      ${late ? '<span class="late-badge">LATE</span>' : ""}
+    <div class="status-card ${cls}">
+      ${isNight ? '<span class="night-badge">NIGHT</span>' : ""}
       <div class="name">${person.name}</div>
       <div class="status">${person.status}</div>
       <div class="time">since ${time}</div>
