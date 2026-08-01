@@ -494,8 +494,21 @@ function Push-HikStreamEvent {
     }
 }
 
+function Update-HikSyncHeartbeat {
+    $stateBody = @{
+        device_serial     = "DSK1T320EFWX20221110V030500ENL43488191"
+        last_synced_time  = (Get-Date).ToString("o")
+    }
+    try {
+        Invoke-CloudApi -Method POST -Path "/rest/v1/sync_state?on_conflict=device_serial" -Body $stateBody -Prefer "resolution=merge-duplicates,return=minimal" -ErrorAction Stop | Out-Null
+    } catch {
+        Write-SyncLog "EventStream: heartbeat update failed: $($_.Exception.Message)"
+    }
+}
+
 function Start-HikEventStream {
     try { Sync-HikPeopleToCloud } catch { Write-SyncLog "EventStream: initial people sync failed, continuing anyway: $($_.Exception.Message)" }
+    Update-HikSyncHeartbeat
 
     while ($true) {
         $req = $null
@@ -541,6 +554,7 @@ function Start-HikEventStream {
                 }
                 if (((Get-Date) - $lastPeopleSync).TotalMinutes -ge 10) {
                     try { Sync-HikPeopleToCloud } catch { Write-SyncLog "EventStream: periodic people sync failed: $($_.Exception.Message)" }
+                    Update-HikSyncHeartbeat
                     $lastPeopleSync = Get-Date
                 }
             }
