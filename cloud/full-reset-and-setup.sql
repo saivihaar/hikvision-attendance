@@ -37,7 +37,10 @@ create table events (
   device_serial        text not null default 'DSK1T320EFWX20221110V030500ENL43488191',
   raw                  jsonb,
   synced_at            timestamptz not null default now(),
-  unique (device_serial, employee_no, event_time, minor, door_no)
+  -- door_no intentionally excluded: the device reports it inconsistently
+  -- (present via polling, absent via the live event stream for some minor
+  -- codes), which caused the same physical scan to insert as two rows.
+  unique (device_serial, employee_no, event_time, minor)
 );
 create index events_employee_time_idx on events (employee_no, event_time desc);
 create index events_time_idx on events (event_time desc);

@@ -411,7 +411,7 @@ function Sync-HikEventsOnly {
             }
         }
         try {
-            Invoke-CloudApi -Method POST -Path "/rest/v1/events?on_conflict=device_serial,employee_no,event_time,minor,door_no" -Body $payload -Prefer "resolution=ignore-duplicates,return=minimal" -ErrorAction Stop | Out-Null
+            Invoke-CloudApi -Method POST -Path "/rest/v1/events?on_conflict=device_serial,employee_no,event_time,minor" -Body $payload -Prefer "resolution=ignore-duplicates,return=minimal" -ErrorAction Stop | Out-Null
         } catch {
             Write-SyncLog "SyncEvents FAILED to push events: $($_.Exception.Message) - not advancing sync-state.json, will retry this window next run"
             return
@@ -487,7 +487,7 @@ function Push-HikStreamEvent {
         raw         = $EventObj
     })
     try {
-        Invoke-CloudApi -Method POST -Path "/rest/v1/events?on_conflict=device_serial,employee_no,event_time,minor,door_no" -Body $payload -Prefer "resolution=ignore-duplicates,return=minimal" -ErrorAction Stop | Out-Null
+        Invoke-CloudApi -Method POST -Path "/rest/v1/events?on_conflict=device_serial,employee_no,event_time,minor" -Body $payload -Prefer "resolution=ignore-duplicates,return=minimal" -ErrorAction Stop | Out-Null
         Write-SyncLog "StreamEvent: $($ace.employeeNoString) ($($ace.name)) $eventType at $($EventObj.dateTime)"
     } catch {
         Write-SyncLog "StreamEvent FAILED to push ($($ace.employeeNoString) at $($EventObj.dateTime)): $($_.Exception.Message)"
