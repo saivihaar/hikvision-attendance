@@ -19,6 +19,14 @@ function timeOfDayMinutes(dateObj) {
   return dateObj.getHours() * 60 + dateObj.getMinutes();
 }
 
+function formatDMY(dateObj) {
+  const d = String(dateObj.getDate()).padStart(2, "0");
+  const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const y = dateObj.getFullYear();
+  const time = dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
+  return `${d}/${m}/${y} ${time}`;
+}
+
 function shiftDateKey(eventTime, isNight) {
   const d = new Date(eventTime);
   if (isNight && d.getHours() < 12) {
@@ -64,10 +72,10 @@ function renderDaysHtml(days, person) {
       weekday: "short", month: "short", day: "numeric", year: "numeric",
     });
     const rows = day.pairs.map((p) => {
-      const inTime = new Date(p.in.event_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const inTime = new Date(p.in.event_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
       const inLate = person ? lateBadge(p.in.event_time, person.expected_in_time) : "";
       if (p.out) {
-        const outTime = new Date(p.out.event_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        const outTime = new Date(p.out.event_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
         const outLate = person ? lateBadge(p.out.event_time, person.expected_out_time) : "";
         const dur = formatDuration(new Date(p.out.event_time) - new Date(p.in.event_time));
         return `<div class="tl-row">

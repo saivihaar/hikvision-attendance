@@ -1,11 +1,3 @@
-function formatDMY(dateObj) {
-  const d = String(dateObj.getDate()).padStart(2, "0");
-  const m = String(dateObj.getMonth() + 1).padStart(2, "0");
-  const y = dateObj.getFullYear();
-  const time = dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  return `${d}/${m}/${y} ${time}`;
-}
-
 function renderPersonCard(person) {
   const cls = person.status === "IN" ? "in" : "out";
   const lastUpdate = formatDMY(new Date(person.last_event_time));
@@ -71,7 +63,7 @@ async function loadStaleness() {
 
   const lastSync = new Date(data[0].last_synced_time);
   const minutesAgo = Math.round((Date.now() - lastSync.getTime()) / 60000);
-  note.textContent = `Last synced from device: ${lastSync.toLocaleString()} (${minutesAgo} min ago)`;
+  note.textContent = `Last synced from device: ${formatDMY(lastSync)} (${minutesAgo} min ago)`;
   if (minutesAgo > 15) {
     note.textContent += " - office PC may be offline or the sync task may have stopped.";
   }

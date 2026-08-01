@@ -246,7 +246,7 @@ async function runSearch() {
   info.textContent = `${lastResults.length} event(s) found`;
   body.innerHTML = lastResults.map((e) => `
     <tr>
-      <td>${new Date(e.event_time).toLocaleString()}</td>
+      <td>${formatDMY(new Date(e.event_time))}</td>
       <td>${e.employee_no}</td>
       <td>${nameForEmployee(e.employee_no)}</td>
       <td>${eventTypeBadge(e.event_type)}</td>
